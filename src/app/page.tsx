@@ -1,65 +1,55 @@
-import Image from "next/image";
+import { db } from "@/lib/db";
+import Link from 'next/link';
 
-export default function Home() {
+export default async function KidsLandingPage() {
+  const students = await db.student.findMany();
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+    <div className="min-h-screen bg-[#F0FDF4] flex flex-col items-center justify-center p-6 relative overflow-hidden font-sans">
+      {/* Decorative elements */}
+      <div className="absolute top-10 left-10 w-48 h-24 bg-white rounded-full opacity-60 shadow-sm blur-md animate-pulse"></div>
+      <div className="absolute top-40 right-20 w-64 h-32 bg-white rounded-full opacity-70 shadow-sm blur-md"></div>
+      
+      <div className="z-10 text-center max-w-4xl w-full">
+        <h1 className="text-5xl md:text-7xl font-extrabold text-emerald-600 mb-6 drop-shadow-md tracking-tight" style={{ WebkitTextStroke: '1px white' }}>
+          Ai đang học thế nhỉ? 🌟
+        </h1>
+        <p className="text-2xl text-emerald-700 font-bold mb-16 drop-shadow-sm">Chọn tên của bạn để bắt đầu thử thách nhé!</p>
+
+        {students.length === 0 ? (
+          <div className="bg-white p-10 rounded-3xl shadow-xl shadow-emerald-200 border-4 border-emerald-100 inline-block">
+            <h2 className="text-2xl text-slate-700 font-bold mb-6">Ối! Chưa có bạn nhỏ nào cả...</h2>
+            <Link href="/admin/students" className="px-8 py-4 bg-indigo-500 hover:bg-indigo-600 text-white font-bold rounded-2xl transition-transform hover:scale-105 inline-block shadow-lg">
+              Bố/Mẹ hãy vào trang quản trị để thêm nhé!
+            </Link>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-8 justify-center">
+            {students.map((student) => (
+              <Link key={student.id} href={`/kids/${student.id}/exams`}>
+                <div className="group bg-white rounded-[2.5rem] w-64 p-8 shadow-xl shadow-emerald-200 border-b-[10px] border-r-8 border-emerald-300 hover:border-emerald-500 hover:-translate-y-3 hover:translate-x-1 active:translate-y-0 active:border-b-4 active:border-r-4 transition-all cursor-pointer flex flex-col items-center">
+                  <div className="w-36 h-36 rounded-full overflow-hidden mb-6 bg-[#E0F2FE] flex items-center justify-center group-hover:scale-110 transition-transform shadow-inner border-4 border-white">
+                    {student.avatarUrl ? (
+                      <img src={student.avatarUrl} alt={student.name} className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="text-7xl">👧👦</div>
+                    )}
+                  </div>
+                  <h2 className="text-4xl font-black text-slate-800">{student.name}</h2>
+                  <div className="mt-4 px-5 py-2 bg-amber-100 text-amber-600 font-bold rounded-full text-base border-2 border-amber-200">
+                    Lớp {student.grade}
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Admin access */}
+      <Link href="/admin" className="absolute bottom-6 right-6 p-4 opacity-40 hover:opacity-100 text-slate-700 bg-white/80 rounded-full shadow-sm hover:bg-white transition-opacity font-bold z-50">
+        🛠️ Quản trị Phụ huynh
+      </Link>
     </div>
   );
 }

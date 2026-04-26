@@ -52,5 +52,6 @@ model Result {
   exam           Exam     @relation(fields: [examId], references: [id], onDelete: Cascade)
   score          Int
   totalQuestions Int
+  answersJson    String?
   completedAt    DateTime @default(now())
 }

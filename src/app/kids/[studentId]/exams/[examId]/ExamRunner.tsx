@@ -89,7 +89,7 @@ export default function ExamRunner({ exam, student }: any) {
        });
        setFinalScoreState(finalScore);
 
-       await saveExamResult(student.id, exam.id, finalScore, questions.length);
+       await saveExamResult(student.id, exam.id, finalScore, questions.length, JSON.stringify(answers));
    };
 
    if (!mounted) return null;

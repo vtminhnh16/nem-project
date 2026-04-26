@@ -2,13 +2,14 @@
 import { db } from "@/lib/db";
 import { revalidatePath } from "next/cache";
 
-export async function saveExamResult(studentId: string, examId: string, score: number, totalQuestions: number) {
+export async function saveExamResult(studentId: string, examId: string, score: number, totalQuestions: number, answersJson?: string) {
     await db.result.create({
         data: {
              studentId,
              examId,
              score,
-             totalQuestions
+             totalQuestions,
+             answersJson
         }
     });
     

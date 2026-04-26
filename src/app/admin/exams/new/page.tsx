@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useRef } from "react";
-import { generateExamFromImageAction } from "./actions";
+import { generateExamFromImageAction, extractOriginalExamFromImageAction } from "./actions";
 import { saveExamAction } from "./save-action";
 import { useRouter } from "next/navigation";
 import { UploadCloud, Loader2, Sparkles, CheckCircle2 } from "lucide-react";
@@ -47,6 +47,25 @@ export default function NewAIExamPage() {
        setGeneratedQuestions(result);
     } catch (err: any) {
        setError(err.message || "Có lỗi bất ngờ khi sinh đề.");
+    } finally {
+       setLoading(false);
+    }
+  };
+
+  const handleExtractOriginal = async () => {
+    if (!imagePreview) {
+      setError("Vui lòng tải ảnh đề mẫu lên.");
+      return;
+    }
+    setError("");
+    setLoading(true);
+    
+    try {
+       const result = await extractOriginalExamFromImageAction(imagePreview, grade);
+       setGeneratedQuestions(result);
+       setTitle("Đề thi gốc");
+    } catch (err: any) {
+       setError(err.message || "Có lỗi bất ngờ khi trích xuất.");
     } finally {
        setLoading(false);
     }
@@ -102,6 +121,44 @@ export default function NewAIExamPage() {
       setGeneratedQuestions(prev => {
           const newArr = [...prev];
           newArr[index] = {...newArr[index], questionText: newText};
+          return newArr;
+      });
+  };
+
+  const handleEditCorrectAnswer = (index: number, newAnswer: string) => {
+      setGeneratedQuestions(prev => {
+          const newArr = [...prev];
+          newArr[index] = {...newArr[index], correctAnswer: newAnswer};
+          return newArr;
+      });
+  };
+
+  const handleEditOption = (qIndex: number, optIndex: number, newOptionText: string) => {
+      setGeneratedQuestions(prev => {
+          const newArr = [...prev];
+          const newOptions = [...newArr[qIndex].options];
+          const oldOptionText = newOptions[optIndex];
+          
+          newOptions[optIndex] = newOptionText;
+          
+          let newCorrectAnswer = newArr[qIndex].correctAnswer;
+          if (oldOptionText === newCorrectAnswer) {
+              newCorrectAnswer = newOptionText;
+          }
+
+          newArr[qIndex] = {
+              ...newArr[qIndex], 
+              options: newOptions,
+              correctAnswer: newCorrectAnswer
+          };
+          return newArr;
+      });
+  };
+
+  const handleSelectCorrectOption = (qIndex: number, optionText: string) => {
+      setGeneratedQuestions(prev => {
+          const newArr = [...prev];
+          newArr[qIndex] = {...newArr[qIndex], correctAnswer: optionText};
           return newArr;
       });
   };
@@ -190,14 +247,24 @@ export default function NewAIExamPage() {
                        </div>
                    </div>
 
-                   <button 
-                     onClick={handleGenerate} 
-                     disabled={loading || !imagePreview}
-                     className="w-full py-4 bg-indigo-600 disabled:bg-slate-300 hover:bg-indigo-700 text-white rounded-2xl font-bold text-lg flex justify-center items-center gap-2 transition-all"
-                   >
-                     {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
-                     {loading ? "Đang nhờ AI chấm đề..." : "Nhờ AI Tạo Đề Mới"}
-                   </button>
+                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">
+                       <button 
+                         onClick={handleExtractOriginal} 
+                         disabled={loading || !imagePreview}
+                         className="w-full py-3 bg-emerald-600 disabled:bg-slate-300 hover:bg-emerald-700 text-white rounded-xl font-bold text-base flex justify-center items-center gap-2 transition-all shadow-sm"
+                       >
+                         {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                         {loading ? "Đang xử lý..." : "1. Trích xuất Đề Gốc"}
+                       </button>
+                       <button 
+                         onClick={handleGenerate} 
+                         disabled={loading || !imagePreview}
+                         className="w-full py-3 bg-indigo-600 disabled:bg-slate-300 hover:bg-indigo-700 text-white rounded-xl font-bold text-base flex justify-center items-center gap-2 transition-all shadow-sm"
+                       >
+                         {loading ? <Loader2 className="animate-spin" /> : <Sparkles />}
+                         {loading ? "Đang xử lý..." : "2. AI Sinh Đề Mới"}
+                       </button>
+                   </div>
                </div>
            </div>
        ) : (
@@ -271,16 +338,36 @@ export default function NewAIExamPage() {
                            </div>
 
                            {q.type === 'FILL_IN' || (!q.options || q.options.length === 0) ? (
-                               <div className="pl-4 mt-2">
-                                  <div className="inline-block px-6 py-3 rounded-xl border-2 border-slate-300 border-dashed text-emerald-700 font-bold bg-emerald-50 text-xl">
-                                      Đáp án: {q.correctAnswer}
-                                  </div>
+                               <div className="pl-4 mt-2 flex items-center gap-3">
+                                  <span className="font-bold text-slate-700 whitespace-nowrap">Đáp án:</span>
+                                  <input 
+                                     value={q.correctAnswer}
+                                     onChange={(e) => handleEditCorrectAnswer(i, e.target.value)}
+                                     className="px-4 py-2 rounded-xl border-2 border-slate-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 text-emerald-700 font-bold bg-emerald-50 text-xl outline-none transition-all w-full md:w-1/2"
+                                     placeholder="Nhập đáp án đúng..."
+                                  />
                                </div>
                            ) : (
                                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-4">
                                    {q.options.map((opt: string, optIdx: number) => (
-                                       <div key={optIdx} className={`px-4 py-3 rounded-xl border ${opt === q.correctAnswer ? 'bg-emerald-50 border-emerald-200 text-emerald-800 font-bold' : 'border-slate-200 bg-slate-50 text-slate-600'}`}>
-                                           {String.fromCharCode(65 + optIdx)}. {opt}
+                                       <div key={optIdx} className={`px-4 py-3 rounded-xl border flex items-center gap-3 transition-colors ${opt === q.correctAnswer ? 'bg-emerald-50 border-emerald-300 text-emerald-800' : 'border-slate-300 bg-slate-50 text-slate-600 focus-within:border-indigo-400 focus-within:ring-2 focus-within:ring-indigo-100'}`}>
+                                           <div className="flex-shrink-0 flex items-center">
+                                               <input 
+                                                  type="radio" 
+                                                  name={`correct-answer-${i}`}
+                                                  checked={opt === q.correctAnswer}
+                                                  onChange={() => handleSelectCorrectOption(i, opt)}
+                                                  className="w-5 h-5 text-emerald-600 focus:ring-emerald-500 border-gray-300 cursor-pointer"
+                                                  title="Chọn làm đáp án đúng"
+                                               />
+                                           </div>
+                                           <span className="font-bold text-lg">{String.fromCharCode(65 + optIdx)}.</span>
+                                           <input 
+                                              value={opt}
+                                              onChange={(e) => handleEditOption(i, optIdx, e.target.value)}
+                                              className={`w-full bg-transparent outline-none ${opt === q.correctAnswer ? 'font-bold' : ''}`}
+                                              placeholder={`Nhập lựa chọn ${String.fromCharCode(65 + optIdx)}...`}
+                                           />
                                        </div>
                                    ))}
                                </div>

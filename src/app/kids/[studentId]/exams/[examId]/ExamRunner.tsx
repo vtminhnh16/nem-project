@@ -53,10 +53,9 @@ const playWinSound = () => {
 export default function ExamRunner({ exam, student }: any) {
    const { width, height } = useWindowSize();
    const [currentIndex, setCurrentIndex] = useState(0);
-   const [score, setScore] = useState(0);
+   const [answers, setAnswers] = useState<Record<number, string>>({});
+   const [finalScoreState, setFinalScoreState] = useState(0);
    const [isFinished, setIsFinished] = useState(false);
-   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-   const [inputValue, setInputValue] = useState("");
    const [mounted, setMounted] = useState(false);
 
    useEffect(() => setMounted(true), []);
@@ -64,51 +63,79 @@ export default function ExamRunner({ exam, student }: any) {
    const questions = exam.questions;
    const currentQ = questions[currentIndex];
 
-   const processAnswer = (opt: string) => {
-       if (selectedOption !== null) return; // already answered
-       setSelectedOption(opt);
+   const handleSelect = (opt: string) => {
        playClickSound();
+       setAnswers(prev => ({...prev, [currentIndex]: opt}));
        
-       // Calculate correctness in background (hide from user)
-       const correct = String(opt).trim().toLowerCase() === String(currentQ.correctAnswer).trim().toLowerCase();
-       if (correct) {
-           setScore(prev => prev + 1);
-       }
-
-       // Move to next rapidly after selection since we don't show feedback
+       // Optionally auto-advance after short delay to save clicks
        setTimeout(() => {
            if (currentIndex < questions.length - 1) {
                setCurrentIndex(prev => prev + 1);
-               setSelectedOption(null);
-               setInputValue("");
-           } else {
-               finishExam(score + (correct ? 1 : 0));
            }
-       }, 600); // 0.6 second delay
+       }, 400);
    };
 
-   const handleSelect = (opt: string) => processAnswer(opt);
-   const handleFillInSubmit = () => processAnswer(inputValue);
-
-   const finishExam = async (finalScore: number) => {
+   const finishExam = async () => {
        setIsFinished(true);
        playWinSound(); // Play celebratory sound
+       
+       let finalScore = 0;
+       questions.forEach((q: any, i: number) => {
+           const userAns = answers[i] || "";
+           const correctAns = String(q.correctAnswer).trim().toLowerCase();
+           if (String(userAns).trim().toLowerCase() === correctAns) {
+               finalScore++;
+           }
+       });
+       setFinalScoreState(finalScore);
+
        await saveExamResult(student.id, exam.id, finalScore, questions.length);
    };
 
    if (!mounted) return null;
 
    if (isFinished) {
-      const isPerfect = score === questions.length;
+      const isPerfect = finalScoreState === questions.length;
       return (
-          <div className="min-h-screen bg-[#FFFBEB] flex flex-col items-center justify-center p-6 text-center absolute inset-0 z-50">
+          <div className="min-h-screen bg-[#FFFBEB] flex flex-col items-center py-12 px-4 text-center absolute inset-0 z-50 overflow-y-auto">
               {isPerfect && <Confetti width={width} height={height} numberOfPieces={400} recycle={false} />}
               {!isPerfect && <Confetti width={width} height={height} numberOfPieces={100} recycle={false} />}
-              <div className="bg-white p-12 rounded-[3xl] shadow-2xl border-b-[12px] border-amber-300 animate-in zoom-in max-w-lg w-full">
+              <div className="bg-white p-6 md:p-10 rounded-[3xl] shadow-2xl border-b-[12px] border-amber-300 animate-in zoom-in max-w-2xl w-full my-auto">
                   <div className="text-8xl mb-6">{isPerfect ? '🏆' : '⭐'}</div>
                   <h1 className="text-4xl font-black text-amber-500 mb-2">{isPerfect ? 'Xuất Sắc!' : 'Tuyệt Vời!'}</h1>
-                  <p className="text-2xl text-slate-700 font-bold mb-8">Bạn làm đúng <span className="text-emerald-500 text-6xl mx-2 font-black">{score}/{questions.length}</span> câu</p>
+                  <p className="text-2xl text-slate-700 font-bold mb-8">Bạn làm đúng <span className="text-emerald-500 text-6xl mx-2 font-black">{finalScoreState}/{questions.length}</span> câu</p>
                   
+                  <div className="mt-8 mb-10 text-left space-y-4">
+                      {questions.map((q: any, i: number) => {
+                          const userAns = answers[i] || "";
+                          const correctAns = String(q.correctAnswer).trim().toLowerCase();
+                          const isCorrect = String(userAns).trim().toLowerCase() === correctAns;
+
+                          return (
+                              <div key={i} className={`p-5 rounded-2xl border-[3px] ${isCorrect ? 'bg-emerald-50 border-emerald-200' : 'bg-red-50 border-red-200'}`}>
+                                  <h3 className="font-bold text-slate-800 mb-3 text-lg leading-snug">
+                                      <span className="mr-2 opacity-60">Câu {i + 1}:</span> 
+                                      {q.questionText}
+                                  </h3>
+                                  {q.imageUrl && <img src={q.imageUrl} alt="minh hoạ" className="max-h-32 mb-4 rounded-xl shadow-sm border border-slate-200" />}
+                                  
+                                  <div className="flex flex-col sm:flex-row gap-3">
+                                      <div className={`flex-1 px-4 py-3 rounded-xl border-2 ${isCorrect ? 'bg-emerald-100/50 border-emerald-300 text-emerald-800' : 'bg-red-100/50 border-red-300 text-red-800'}`}>
+                                          <div className="font-bold text-[10px] uppercase tracking-widest opacity-60 mb-1">Bạn chọn</div> 
+                                          <div className="text-lg font-black break-words">{userAns || "(Bỏ trống)"}</div>
+                                      </div>
+                                      {!isCorrect && (
+                                          <div className="flex-1 px-4 py-3 rounded-xl border-2 bg-emerald-100/50 border-emerald-300 text-emerald-800">
+                                              <div className="font-bold text-[10px] uppercase tracking-widest opacity-60 mb-1">Đáp án đúng</div> 
+                                              <div className="text-lg font-black break-words">{q.correctAnswer}</div>
+                                          </div>
+                                      )}
+                                  </div>
+                              </div>
+                          );
+                      })}
+                  </div>
+
                   <Link href={`/kids/${student.id}/exams`} className="px-8 py-5 bg-gradient-to-b from-amber-400 to-amber-500 hover:to-amber-400 text-amber-950 font-black text-2xl rounded-2xl block w-full shadow-lg border-b-[6px] border-amber-600 active:border-b-0 active:translate-y-2 transition-all">
                       Thoát! 🎮
                   </Link>
@@ -131,9 +158,16 @@ export default function ExamRunner({ exam, student }: any) {
                    <div className="font-extrabold text-slate-700 text-xl hidden sm:block">{student.name}</div>
                </div>
                <div className="flex gap-1 bg-slate-50 p-2 rounded-full border border-slate-100 overflow-hidden">
-                   {questions.map((_: any, i: number) => (
-                       <div key={i} className={`h-4 rounded-full transition-all duration-300 ${i < currentIndex ? 'bg-indigo-400 w-6 sm:w-8' : i === currentIndex ? 'bg-sky-500 w-8 sm:w-12 shadow-[0_0_10px_rgba(14,165,233,0.5)]' : 'bg-slate-200 w-4 sm:w-6'}`}></div>
-                   ))}
+                   {questions.map((_: any, i: number) => {
+                       const isAnswered = answers[i] !== undefined && answers[i].trim() !== "";
+                       let bgClass = "bg-slate-200 w-4 sm:w-6";
+                       if (i === currentIndex) bgClass = "bg-sky-500 w-8 sm:w-12 shadow-[0_0_10px_rgba(14,165,233,0.5)]";
+                       else if (isAnswered) bgClass = "bg-indigo-400 w-6 sm:w-8";
+                       
+                       return (
+                           <div key={i} className={`h-4 rounded-full transition-all duration-300 ${bgClass}`}></div>
+                       );
+                   })}
                </div>
                <div className="font-black text-sky-700 bg-sky-100 border-2 border-sky-200 px-5 py-2.5 rounded-full text-lg">
                   {currentIndex + 1} / {questions.length}
@@ -162,41 +196,23 @@ export default function ExamRunner({ exam, student }: any) {
                        <input 
                            type="text"
                            inputMode="decimal"
-                           value={inputValue}
-                           onChange={(e) => setInputValue(e.target.value)}
-                           disabled={selectedOption !== null}
+                           value={answers[currentIndex] || ""}
+                           onChange={(e) => setAnswers(prev => ({...prev, [currentIndex]: e.target.value}))}
                            placeholder="?"
-                           className={`w-full sm:w-64 text-center text-6xl font-black p-6 md:p-8 rounded-[3rem] border-[8px] outline-none transition-all shadow-xl ${
-                               selectedOption !== null 
-                                 ? 'border-sky-500 bg-sky-100 text-sky-700'
-                                 : 'border-sky-300 bg-white text-slate-700 focus:border-sky-500'
-                           }`}
+                           className={`w-full sm:w-64 text-center text-6xl font-black p-6 md:p-8 rounded-[3rem] border-[8px] outline-none transition-all shadow-xl border-sky-300 bg-white text-slate-700 focus:border-sky-500`}
                        />
-                       <button 
-                          onClick={handleFillInSubmit}
-                          disabled={selectedOption !== null || !inputValue.trim()}
-                          className="w-full sm:w-auto h-32 md:h-36 px-12 rounded-[3rem] bg-indigo-500 hover:bg-indigo-600 active:translate-y-3 border-b-[12px] active:border-b-0 border-indigo-700 text-white font-black text-4xl md:text-5xl transition-all disabled:opacity-50 disabled:active:translate-y-0 disabled:border-b-[12px] flex items-center justify-center cursor-pointer shadow-xl"
-                       >
-                          GỬI
-                       </button>
                    </div>
                ) : (
                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 w-full md:max-w-[75%] mx-auto">
                        {optionsList.map((opt: string, idx: number) => {
-                           let stateClass = "bg-white hover:-translate-y-2 hover:shadow-2xl border-slate-200 border-b-[8px] text-slate-700"; 
+                           const isSelected = answers[currentIndex] === opt;
+                           const stateClass = isSelected 
+                               ? "bg-sky-400 border-sky-600 text-white translate-y-2 border-b-[2px] opacity-100 shadow-md" 
+                               : "bg-white hover:-translate-y-2 hover:shadow-2xl border-slate-200 border-b-[8px] text-slate-700"; 
                            
-                           if (selectedOption !== null) {
-                               if (opt === selectedOption) {
-                                   stateClass = "bg-sky-400 border-sky-600 text-white translate-y-2 border-b-[2px] opacity-100 shadow-md"; 
-                               } else {
-                                   stateClass = "bg-white border-slate-200 text-slate-400 opacity-40 translate-y-1 border-b-[4px]";
-                               }
-                           }
-
                            return (
                                <button 
                                  key={idx}
-                                 disabled={selectedOption !== null}
                                  onClick={() => handleSelect(opt)}
                                  className={`p-6 md:p-8 rounded-[2rem] border-2 text-3xl lg:text-4xl font-black transition-all flex items-center justify-center break-words outline-none relative overflow-hidden ${stateClass} active:translate-y-2 active:border-b-[2px] cursor-pointer`}
                                >
@@ -206,6 +222,33 @@ export default function ExamRunner({ exam, student }: any) {
                        })}
                    </div>
                )}
+
+               {/* Navigation Buttons */}
+               <div className="w-full max-w-4xl flex justify-between items-center mt-12 px-2 sm:px-6">
+                   <button 
+                       onClick={() => setCurrentIndex(prev => Math.max(0, prev - 1))}
+                       disabled={currentIndex === 0}
+                       className="px-6 sm:px-8 py-4 rounded-3xl font-bold text-xl bg-white text-sky-600 border-b-[6px] border-sky-200 shadow-sm active:translate-y-1 active:border-b-0 disabled:opacity-50 transition-all flex items-center gap-2"
+                   >
+                       ← Quay lại
+                   </button>
+                   
+                   {currentIndex === questions.length - 1 ? (
+                       <button 
+                           onClick={() => finishExam()}
+                           className="px-8 sm:px-10 py-4 rounded-3xl font-black text-xl bg-emerald-500 hover:bg-emerald-600 text-white border-b-[8px] border-emerald-700 shadow-lg active:translate-y-2 active:border-b-0 transition-all flex items-center gap-2"
+                       >
+                           Nộp bài 🏆
+                       </button>
+                   ) : (
+                       <button 
+                           onClick={() => setCurrentIndex(prev => Math.min(questions.length - 1, prev + 1))}
+                           className="px-8 sm:px-10 py-4 rounded-3xl font-bold text-xl bg-sky-500 hover:bg-sky-600 text-white border-b-[8px] border-sky-700 shadow-lg active:translate-y-2 active:border-b-0 transition-all flex items-center gap-2"
+                       >
+                           Tiếp →
+                       </button>
+                   )}
+               </div>
            </div>
        </div>
    )

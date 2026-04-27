@@ -42,7 +42,7 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
 
   try {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-pro',
         contents: [
             {
                role: 'user', 
@@ -109,7 +109,7 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
 
   try {
     const response = await ai.models.generateContent({
-        model: 'gemini-2.0-flash',
+        model: 'gemini-2.5-pro',
         contents: [
             {
                role: 'user', 

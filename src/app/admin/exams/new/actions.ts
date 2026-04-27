@@ -41,7 +41,23 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
 `;
 
   try {
-    const response = await ai.models.generateContent({
+  let response;
+  try {
+    response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+            {
+               role: 'user', 
+               parts: [
+                 { inlineData: { data: base64Data, mimeType } },
+                 { text: prompt },
+               ]
+            }
+        ]
+    });
+  } catch (err: any) {
+    console.log("gemini-2.5-flash failed, falling back to gemini-2.5-pro...", err.message);
+    response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: [
             {
@@ -53,6 +69,7 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
             }
         ]
     });
+  }
 
     const text = response.text;
     if (!text) return { success: false, error: "AI trả về kết quả rỗng" };
@@ -108,7 +125,23 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
 `;
 
   try {
-    const response = await ai.models.generateContent({
+  let response;
+  try {
+    response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: [
+            {
+               role: 'user', 
+               parts: [
+                 { inlineData: { data: base64Data, mimeType } },
+                 { text: prompt },
+               ]
+            }
+        ]
+    });
+  } catch (err: any) {
+    console.log("gemini-2.5-flash failed, falling back to gemini-2.5-pro...", err.message);
+    response = await ai.models.generateContent({
         model: 'gemini-2.5-pro',
         contents: [
             {
@@ -120,6 +153,7 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
             }
         ]
     });
+  }
 
     const text = response.text;
     if (!text) return { success: false, error: "AI trả về kết quả rỗng" };

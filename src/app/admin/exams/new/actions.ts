@@ -5,7 +5,7 @@ import { GoogleGenAI } from '@google/genai';
 export async function generateExamFromImageAction(imageBase64: string, grade: number) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('Chưa cài đặt GEMINI_API_KEY. Vui lòng thêm vào file .env hoặc cấu hình hệ thống.');
+    return { success: false, error: 'Chưa cài đặt GEMINI_API_KEY. Vui lòng thêm vào file .env hoặc cấu hình hệ thống.' };
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -55,25 +55,25 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
     });
 
     const text = response.text;
-    if (!text) throw new Error("AI trả về kết quả rỗng");
+    if (!text) return { success: false, error: "AI trả về kết quả rỗng" };
 
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-       throw new Error("Không giải mã được định dạng của AI. Vui lòng thử lại.");
+       return { success: false, error: "Không giải mã được định dạng của AI. Vui lòng thử lại." };
     }
 
-    return JSON.parse(jsonMatch[0]);
+    return { success: true, data: JSON.parse(jsonMatch[0]) };
     
   } catch (error: any) {
      console.error(error);
-     throw new Error(error.message || "Có lỗi xảy ra khi giao tiếp với AI");
+     return { success: false, error: error.message || "Có lỗi xảy ra khi giao tiếp với AI" };
   }
 }
 
 export async function extractOriginalExamFromImageAction(imageBase64: string, grade: number) {
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) {
-    throw new Error('Chưa cài đặt GEMINI_API_KEY. Vui lòng thêm vào file .env hoặc cấu hình hệ thống.');
+    return { success: false, error: 'Chưa cài đặt GEMINI_API_KEY. Vui lòng thêm vào file .env hoặc cấu hình hệ thống.' };
   }
 
   const ai = new GoogleGenAI({ apiKey });
@@ -122,17 +122,17 @@ NHIỆM VỤ CỰC KỲ KHẮT KHE:
     });
 
     const text = response.text;
-    if (!text) throw new Error("AI trả về kết quả rỗng");
+    if (!text) return { success: false, error: "AI trả về kết quả rỗng" };
 
     const jsonMatch = text.match(/\[[\s\S]*\]/);
     if (!jsonMatch) {
-       throw new Error("Không giải mã được định dạng của AI. Vui lòng thử lại.");
+       return { success: false, error: "Không giải mã được định dạng của AI. Vui lòng thử lại." };
     }
 
-    return JSON.parse(jsonMatch[0]);
+    return { success: true, data: JSON.parse(jsonMatch[0]) };
     
   } catch (error: any) {
      console.error(error);
-     throw new Error(error.message || "Có lỗi xảy ra khi giao tiếp với AI");
+     return { success: false, error: error.message || "Có lỗi xảy ra khi giao tiếp với AI" };
   }
 }

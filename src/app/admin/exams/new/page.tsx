@@ -44,7 +44,11 @@ export default function NewAIExamPage() {
     
     try {
        const result = await generateExamFromImageAction(imagePreview, grade);
-       setGeneratedQuestions(result);
+       if (result.success) {
+           setGeneratedQuestions(result.data);
+       } else {
+           setError(result.error || "Có lỗi bất ngờ khi sinh đề.");
+       }
     } catch (err: any) {
        setError(err.message || "Có lỗi bất ngờ khi sinh đề.");
     } finally {
@@ -62,8 +66,12 @@ export default function NewAIExamPage() {
     
     try {
        const result = await extractOriginalExamFromImageAction(imagePreview, grade);
-       setGeneratedQuestions(result);
-       setTitle("Đề thi gốc");
+       if (result.success) {
+           setGeneratedQuestions(result.data);
+           setTitle("Đề thi gốc");
+       } else {
+           setError(result.error || "Có lỗi bất ngờ khi trích xuất.");
+       }
     } catch (err: any) {
        setError(err.message || "Có lỗi bất ngờ khi trích xuất.");
     } finally {
